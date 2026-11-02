@@ -277,3 +277,5 @@ Architecture → DB → Auth → Doctor approval → Booking → Chat → Prescr
 Full API list: [`docs/API_COMPLETE.md`](docs/API_COMPLETE.md)
 
 Next (optional): build Admin React panel (`doctorbook-web`) and Flutter apps (`doctorbook_app`).
+#   b a c k e n d - d o c t o r b o o k  
+ 
