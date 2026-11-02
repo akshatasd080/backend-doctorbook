@@ -1,0 +1,121 @@
+============================================================
+ DoctorBook Backend — PostgreSQL Permissions Reference
+============================================================
+
+This file documents what permissions doctorbook_user needs
+and how they are granted. Use this if something breaks or
+you need to re-apply permissions on a fresh server.
+
+
+------------------------------------------------------------
+1. ROLE / USER
+------------------------------------------------------------
+
+  CREATE USER doctorbook_user WITH PASSWORD 'Doctorbook@2026';
+
+  -- Optional: allow login only (default for CREATE USER)
+  -- ALTER ROLE doctorbook_user WITH LOGIN;
+
+
+------------------------------------------------------------
+2. DATABASE LEVEL
+------------------------------------------------------------
+
+  CREATE DATABASE doctorbook_db OWNER doctorbook_user;
+
+  REVOKE CONNECT ON DATABASE doctorbook_db FROM PUBLIC;
+  GRANT CONNECT ON DATABASE doctorbook_db TO doctorbook_user;
+
+  -- Optional: allow creating temporary tables
+  GRANT TEMPORARY ON DATABASE doctorbook_db TO doctorbook_user;
+
+
+------------------------------------------------------------
+3. SCHEMA LEVEL
+------------------------------------------------------------
+
+  -- Run after connecting: \c doctorbook_db
+
+  CREATE SCHEMA IF NOT EXISTS doctorbook_schema AUTHORIZATION doctorbook_user;
+
+  REVOKE ALL ON SCHEMA doctorbook_schema FROM PUBLIC;
+  GRANT USAGE, CREATE ON SCHEMA doctorbook_schema TO doctorbook_user;
+
+
+------------------------------------------------------------
+4. TABLE / SEQUENCE LEVEL (existing objects)
+------------------------------------------------------------
+
+  GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA doctorbook_schema TO doctorbook_user;
+  GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA doctorbook_schema TO doctorbook_user;
+
+
+------------------------------------------------------------
+5. DEFAULT PRIVILEGES (future objects)
+------------------------------------------------------------
+
+  ALTER DEFAULT PRIVILEGES IN SCHEMA doctorbook_schema
+    GRANT ALL ON TABLES TO doctorbook_user;
+
+  ALTER DEFAULT PRIVILEGES IN SCHEMA doctorbook_schema
+    GRANT ALL ON SEQUENCES TO doctorbook_user;
+
+
+------------------------------------------------------------
+6. SEARCH PATH
+------------------------------------------------------------
+
+  ALTER ROLE doctorbook_user SET search_path TO doctorbook_schema, public;
+
+
+------------------------------------------------------------
+7. QUICK RE-APPLY (copy-paste block)
+------------------------------------------------------------
+
+-- Connect as postgres first, then run:
+
+CREATE USER doctorbook_user WITH PASSWORD 'Doctorbook@2026';
+CREATE DATABASE doctorbook_db OWNER doctorbook_user;
+REVOKE CONNECT ON DATABASE doctorbook_db FROM PUBLIC;
+GRANT CONNECT ON DATABASE doctorbook_db TO doctorbook_user;
+
+\c doctorbook_db
+
+CREATE SCHEMA IF NOT EXISTS doctorbook_schema AUTHORIZATION doctorbook_user;
+REVOKE ALL ON SCHEMA doctorbook_schema FROM PUBLIC;
+GRANT USAGE, CREATE ON SCHEMA doctorbook_schema TO doctorbook_user;
+ALTER ROLE doctorbook_user SET search_path TO doctorbook_schema, public;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA doctorbook_schema TO doctorbook_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA doctorbook_schema TO doctorbook_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA doctorbook_schema GRANT ALL ON TABLES TO doctorbook_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA doctorbook_schema GRANT ALL ON SEQUENCES TO doctorbook_user;
+
+
+------------------------------------------------------------
+8. HOW TO CHECK PERMISSIONS
+------------------------------------------------------------
+
+  -- List roles
+  \du
+
+  -- List databases
+  \l
+
+  -- List schemas (after \c doctorbook_db)
+  \dn+
+
+  -- Check grants on schema
+  SELECT nspname, rolname, has_schema_privilege(rolname, nspname, 'USAGE') AS usage,
+         has_schema_privilege(rolname, nspname, 'CREATE') AS create
+  FROM pg_namespace, pg_roles
+  WHERE nspname = 'doctorbook_schema' AND rolname = 'doctorbook_user';
+
+
+============================================================
+ NOTES
+============================================================
+
+- Never use the "postgres" superuser from the Node.js app.
+- Always connect as doctorbook_user from the backend (.env).
+- Change the password before deploying to a real production server.
+- Keep PUBLIC revoked so anonymous DB users cannot connect.
